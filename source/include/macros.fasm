@@ -1,0 +1,94 @@
+; These macros make life *much* easier for us in implementing
+; the compiler :)
+;
+macro swap { xchg eax, [esi] }
+macro dup
+{
+	sub esi,4
+	mov [esi],eax
+}
+macro drop { lodsd }
+macro upsh a
+{
+	dup
+	mov eax, a
+}
+macro upop a
+{
+	mov a, eax
+	drop
+}
+macro push [a]
+{
+	push a
+}
+macro pop [a]
+{
+	reverse pop a
+}
+macro embed str
+{
+	local e1,e2,e3
+	upsh e1
+	upsh [e2]
+	call eval
+	jmp e3
+	e1: db str
+	e2: dd ($-e1)
+	e3:
+}
+macro next { ret }
+
+;-------------------------------------------------------------------------
+; Dictionary Macros (based on IsForth's)
+macro countedstring str
+{
+	local endofstring
+	db (endofstring - $)
+	db str
+	endofstring = ($ - 1)
+}
+
+vlink equ 0
+xlink equ 0
+forth_link equ 0       ;link to previous word in forth vocab
+macro_link equ 0       ;link to previous word in forth vocab
+voc equ 0
+
+macro code a,b
+{
+local c
+label c
+	dd vlink	; link to previous word in vocab
+	vlink equ c
+	dd b		; ptr to CFA (.text)
+	countedstring a
+	forth_link equ vlink
+label b
+}
+
+macro var qname,nm,value
+{
+	local aname
+	code qname,aname
+	call dovar
+	nm dd value
+}
+
+macro mcode a,b
+{
+local c
+label c
+   dd xlink	; link to previous word in vocab
+   xlink equ c
+   dd b 	; ptr to CFA (.text)
+   countedstring a
+   macro_link equ xlink
+label b
+}
+
+macro inline [a]
+{
+  upsh a
+  call comma1
+}

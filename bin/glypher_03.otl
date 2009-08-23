@@ -1,0 +1,507 @@
+= V4 Outline MultiLine NoSorting TabWidth=30
+
+H="( Header )"
+" glypher_03.otl read " glypher.z compress
+
+H="( Misc )"
+forth
+: nip nip ; : c! c! ;
+: xor xor ; : or or ;
+: not not ; : and and ;
+: / / ; : mod mod ;
+: c@ c@ ; : */ */ ;
+: u+ u+ ; : = = ;
+: < < ; : > > ;
+: 2* 2* ; : 2/ 2/ ;
+: max max ; : min min ;
+: a a ; : @+ @+ ;
+: !+ !+ ; : a! a! ;
+: 2drop 2drop ; : 2dup 2dup ;
+macro
+: x  ;
+: y  1 cells m: literal m: + ;
+forth
+: x  x ;
+: y  y ;
+: 0/1  zero ;; then -1 or ;
+
+: ]#  m: literal ] ;
+
+variable rp0 sp@ rp0 !
+macro
+: rreset [ rp0 @ ]# m: literal $8b 1, $e0 1, m~ ;
+forth
+
+
+
+H="( Blocks )"
+: #blocks  2000 ;
+: blocks  1024 * ;
+align here 32768 blocks allot
+: (blocks)  literal ;
+: block  1024 * [ (blocks) ]# + ;
+: erase  swap block swap blocks 0 cfill ;
+
+// Block Vars
+variable v
+macro
+: bvar  v @ cells 99 block + m: literal 1 v +! ;
+forth
+
+H="( Color Code )"
+variable src
+create current 0 , 0 ,
+: wlen  c@ $1f and ;
+: wcolor  c@ $e0 and 32 / ;
+: mag+  wcolor 5 = if 4 + then ;
+: next  src @ dup wlen over mag+ swap + 1 + ;
+: (word)  dup 1 + swap wlen ;
+: word  src @ dup 1 + current !  (word) next src ! ;
+: token  src @ c@ ;
+: name  current 2@ ;
+: loc  current @ -1 + ;
+
+( Load )
+create $buf 257 allot
+create _$ 1 1, 32 1,
+variable prec
+: found? 32 less 2drop 0 ;; then -1 ;
+: #?  0 -rot >number swap 0 = if -1 ;; then 2drop 0 ;
+: redw  forth name (:) ;
+: bluew  macro name (:) ;
+: nxt  src @ ;
+: do;  m: ;; nxt wcolor 2 < if align then ;
+: ?ylit  prec @ 4 = if m: literal then ;
+: greenw  ?ylit
+   name drop c@ '; = if do; ;; align then
+   name mfind found? if exec ;; then
+   name find found? if compile ;; then
+   name #? if m: literal ;; then name unknown ;
+: cyanw
+   name mfind found? if compile ;; then
+   name find found? if
+   m: literal [ ' compile ]# compile then name unknown ;
+: yelloww
+   name find found? if exec ;; then
+   name #? if ;; then name unknown ;
+: (var)  (create) loc dup wlen 1 + + , does> @ ;
+: magentaw  name forth (var) name macro (var) does> @ m: literal ;
+: whitew  ;
+: collect  dup push $buf dup c@ + 1 + cmove   pop $buf c@ + $buf c! ;
+: brownw
+   name collect  _$ count collect
+   nxt wcolor 7 = not if $buf count -1 +
+    nxt wcolor [ 5 not ]# and if $compile then
+   0 $buf c! then ;
+
+: act  jump redw bluew greenw cyanw yelloww magentaw whitew brownw
+: action  act loc wcolor prec ! ;
+: current!  current 2! ;
+: interpret  src ! 0 prec ! begin token 0; word current! loc wcolor action again ;
+: load  src @ push  block interpret  pop src ! ;
+: 1interpret  src @ push  src ! word current! loc wcolor action pop src ! ;
+
+H="( Allegro )"
+
+" alleg42.dll from
+: install_allegro()  [ " install_allegro 3 cimport ] drop ;
+: allegro_message()  [ " allegro_message 1 cimport ] drop ;
+: set_window_title()  [ " set_window_title 1 cimport ] drop ;
+" gfx_capabilities " gfx_capabilities() cvar
+" allegro_error " allegro_error() cvar
+
+: install_keyboard()  [ " install_keyboard 0  cimport ] drop ;
+: install_timer()  [ " install_timer 0  cimport ] drop ;
+: install_int_ex()  [ " install_int_ex 2  cimport ] drop ;
+: install_int()  [ " install_int 2  cimport ] drop ;
+: install_mouse()  [ " install_mouse 0  cimport ] drop ;
+
+: set_gfx_mode()  [ " set_gfx_mode 5  cimport ] ;
+: set_color_depth()  [ " set_color_depth 1  cimport ] drop ;
+: show_video_bitmap()  [ " show_video_bitmap 1  cimport ] drop ;
+" screen " screen() cvar
+: vsync()  [ " vsync 0  cimport ] drop ;
+: set_display_switch_mode()  [ " set_display_switch_mode 1  cimport ] drop ;
+
+: load_bmp()  [ " load_bitmap 2  cimport ] ;
+: save_bmp()  [ " save_bitmap 3  cimport ] drop ;
+: create_video_bitmap()  [ " create_video_bitmap 2  cimport ] ;
+: create_bitmap_ex()  [ " create_bitmap_ex 3  cimport ] ;
+: clear_to_color()  [ " clear_to_color 2  cimport ] drop ;
+: destroy_bitmap()  [ " destroy_bitmap 1  cimport ] drop ;
+
+: blit()  [ " blit 8  cimport ] drop ;
+: masked_blit()  [ " masked_blit 8  cimport ] drop ;
+: stretch_blit()  [ " stretch_blit 10  cimport ] drop ;
+
+: draw_sprite()  [ " draw_sprite 4  cimport ] drop ;
+
+: rectfill()  [ " rectfill 6  cimport ] drop ;
+
+
+: keypressed()  [ " keypressed 0  cimport ] ;
+: readkey()  [ " readkey 0  cimport ] ;
+: set_mouse_speed()  [ " set_mouse_speed 2  cimport ] drop ;
+: scancode_to_ascii()  [ " scancode_to_ascii 1  cimport ] ;
+ " key_shifts " key_shifts() cvar
+ " key " key() cvar
+: clear_keybuf()  [ " clear_keybuf 0  cimport ] drop ;
+
+ " mouse_b " mouse_b() cvar
+ " mouse_x " mouse_x() cvar
+ " mouse_y " mouse_y() cvar
+
+: makecol()  [ " makecol 3  cimport ] ;
+: win_get_window()  [ " win_get_window 0  cimport ] ;
+: close_button [ " set_window_close_button 1 cimport ] ;
+
+H="( Allegro helpers )"
+variable err
+: init  0 err 0 install_allegro() install_timer()
+   install_keyboard() install_mouse() ;
+: titlebar  z$ set_window_title() ;
+: bitmap  -rot create_bitmap_ex() ;
+: bcopy  over push 0 0 0 0 pop 2@ blit() ;
+macro
+: dat  $408b 2, 64 1, ;
+forth
+: dat  dat ;
+: bits  28 + @ @ ;
+: dims  2@ ;
+macro
+: w  nop ;
+: h  1 cells m: literal m: + ;
+forth
+: w  w ;
+: h  h ;
+: rows  64 + ;
+init 32 set_color_depth()
+: (temp)  [ 1 1 32 bitmap ]# ;
+: bitmap,
+   swap a push
+   2dup 2dup , , -1 , 0 , , 0 , ,
+   [ (temp) 28 + a! @+ ]# , [ @+ ]# , [ @+ ]# ,
+   here push 0 , 0 , 0 , 0 , 0 , 35 ,
+   2dup cells 0 rot for dup , over + loop 2drop
+   here r !  pop 24 + a! over here swap for dup a @ + !+  loop drop
+   cells * allot
+   pop a! ;  (temp) destroy_bitmap()
+: redim  push 2dup r 24 + ! r 16 + ! pop 2! ;
+
+
+H="( Move Window )"
+" user32.dll from
+: MoveWindow()  [ " MoveWindow 6 import ] ;
+
+
+H="( Video )"
+create video  1280 800 bitmap,
+: smode bvar ;
+: vw  bvar ;
+: vh  bvar ;
+variable pg#
+create pages 0 , 0 ,
+: other  pg# @ 1 xor dup pg# !  cells pages + ;
+: window  2
+: gfx  smode ! 2dup vh ! vw !
+   2dup smode @ -rot 0 0 set_gfx_mode() if
+     allegro_error() allegro_message()  2drop 512 384 window ;;   then
+   2dup video redim
+   // 2 for other @ destroy_bitmap() loop
+   2dup 2 for create_video_bitmap() other ! loop
+   6 6 set_mouse_speed()
+   3 set_display_switch_mode() ;
+: fit  1 gfx ;
+: repaint  other @ video over bcopy  show_video_bitmap() 2 sleep ;
+: side  video w @ ;
+: bottom  video h @ ;
+
+// 512 384 window
+
+H="( Colors )"
+: magenta $ff00ff ;
+: blue    $0000ff ;
+: white   $ffffff ;
+: black   $000000 ;
+: yellow  $ffff00 ;
+: cyan    $00d0ff ;
+: red     $ff0000 ;
+: grey    $a0a0a0 ;
+: orange  $ff9000 ;
+: dkblue  $0000a0 ;
+
+: pink    $d00060 ;
+: green   $00b000 ;
+: dkgreen $006000 ;
+: dkcyan  $00a0b0 ;
+
+H="( Pen )"
+variable (pen)
+macro
+: penfield  ?lit if cells m: literal (pen)
+   m: literal m: @ m: +  then ;
+: pen@  (pen) m: literal m: @ ;
+forth
+: color0   2 penfield ;
+: color1   3 penfield ;
+: font     5 penfield ;
+: (canvas) 6 penfield ;
+: switch  (pen) @ swap
+: use  (pen) ! ;
+: pen  here push 0 , 0 , black , white , 0 , 0 , , pop switch drop ;
+: canvas  (canvas) @ ;
+
+
+H="( Glyphs )"
+: ofem  for 1 1 8 bitmap , loop ;
+: #glyphs  4096 ;
+create bank  #glyphs ofem
+: (glyph)  [ #glyphs -1 + ]# and cells [ bank ]# + ;
+: bmove  dup dims * swap dat cmove ;
+: image  (glyph) @ ;
+: resize  push 8 bitmap  r image over bcopy r image
+   destroy_bitmap()  pop (glyph) ! ;
+: unpack  swap a! @+ for dup i +
+   dup   @+ @+ rot resize
+   a over image bmove  image dims * +a
+   loop drop ;
+: pack  here push  dup , for dup i +
+    image dup dims swap , ,
+    dup dat over dims * here cmove dims * h0 +!
+   loop drop  r here  over - +  pop h0 ! ;
+: getglyphs push read drop dup pop unpack  free ;
+
+macro
+: edx!  $d08b 2, m~ ;
+: ecx!  $c88b 2, m~ ;
+forth
+: expands  for $18b60f 3, $009d5c8b , $1a89 2, $c103 2, $04c283 3, loop ;
+create (row)  800 expands ] nop ;
+create (medium)  512 512 bitmap,
+variable rowcnt
+: ?8  dup bits 8 = 0;  canvas bits 32 = 0;
+   dup 2@ [ (medium) ]# redim
+   dup w @ -800 + - 14 * [ (row) ]# +
+   swap dup dat swap h @
+   [ (medium) rows ]# [ rowcnt ]# ! 1 ecx!
+   for [ rowcnt ]# @ @ edx! over exec
+   4 [ rowcnt ]# +! loop
+   2drop [ (medium) ]# ;
+
+
+H="( Mouse, keyboard )"
+: LB  509 ;   : RB  510 ;
+: MB  511 ;   : ESC  59 ;
+: SPACE  75 ; : ENTER  67 ;
+: BKSP  63 ;  : F1  47 ;
+: LEFT  82 ;  : RIGHT  83 ;
+: UP  84 ;    : DOWN  85 ;
+: HOME 78 ;   : END 79 ;
+: DEL 77 ;    : INS 76 ;
+: PGUP  80 ;  : PGDN 81 ;
+: TAB 64 ;
+
+: ^  97 more= -96 + ;; then  49 more= -21 + ;; then ;
+: F  -1 + F1 + ;
+: SHIFT?  1
+: sh  key_shifts() @ and 0/1 ;
+: ALT?  4 sh ;
+: CTRL?  2 sh ;
+
+
+H="( Input Handler )"
+create mouse  0 , 0 ,
+create mickey  0 , 0 ,
+create states  1024 allot
+create events  512 cells 4 * allot
+variable k
+variable ik
+: state  states + c@ 0/1 ;
+: before  states + 512 + c@ 0/1 ;
+: dpr  1536 + ;
+: prs  512 + ;
+: rel  1024 + ;
+: auto  ;
+: event  cells events + ;
+: register  swap dup 1 + @ + 5 + swap event ! ;
+: does  1
+: do   r -rot for 2dup register 1 + loop 2drop  pop 5 + push ;
+: nothing  nop ;
+: keymap  0 512 4 * do  nothing nop ; keymap
+: btn  mouse_b() @ and swap states + c! ;
+: pressed  dup state swap before not and 0/1 ;
+: released  dup before swap state not and 0/1 ;
+: trigger  dup 255 and k ! event @ push ;
+: autokeys  0 ik ! begin  keypressed() 0; readkey() dup 255 and ik !
+   256 / ( auto ) trigger again ;
+: key  k @ ;
+: inkey  ik @ ;
+: respond
+   autokeys
+   512 for i state if i dpr trigger then loop
+   512 for i pressed if i prs trigger then loop
+   512 for i released if i rel trigger then loop ;
+: listen
+   states 512 over 512 + cmove
+   key() 128 states cmove
+   LB 1 btn  RB 2 btn  MB 4 btn
+   mouse_x() @ mouse x @ - + dup mickey x ! mouse x +!
+   mouse_y() @ mouse y @ - + dup mickey y ! mouse y +! ;
+
+
+H="( Graphics )"
+: x!  pen@ x ! ;
+: y!  pen@ y ! ;
+: x@  pen@ x @ ;
+: y@  pen@ y @ ;
+: at  y! x! ;
+: at@  x@ y@ ;
+: +y  pen@ y +! ;
+: +x  pen@ x +! ;
+: +at  +y +x ;
+
+: box  push push push canvas at@ pop pop pop rectfill() ;
+: put  canvas swap ?8 at@ draw_sprite() ;
+: text  color1 ! ;
+: seethru  color1 ! magenta
+: bg  color0 ! ;
+: paper  canvas swap clear_to_color() 0 0 at ;
+
+
+H="( Draw text [temporary])"
+: cr  0 x!  0 image h @  +y ;
+: gemit  color0 a!  font @ + image put 0 image w @
+: +?cr  dup +x side swap - + x@ < if cr then ;
+: gtype  -zero for dup c@ gemit 1 + loop drop ;; then 2drop ;
+: (g.)  negative '- gemit - then # gtype ;
+: g.  (g.)
+: gspace  32 gemit ;
+
+H="( Input String )"
+variable pointer
+: in$  pointer @ ;
+: back  in$ c@ 0;
+   SHIFT? if 0 in$ c! ;; then
+   -1
+: +c  in$ c@ + in$ c! ;
+: chars  inkey
+: char  1 +c in$ dup c@ + c! ;
+: $edit  pointer !
+   1 45 do  chars
+   60 6 do  chars
+   68 9 do  chars
+   105 does chars BKSP does back nop ;
+
+
+H="( Display )"
+variable s0
+create penp  video pen
+: redraw  penp switch push s0 @ exec pop use repaint ;
+: show  pop s0 ! ;
+: ?winfit  ENTER pressed ALT? and if video dims smode @ 3 xor gfx then ;
+: monitor  listen respond ?winfit ;
+
+
+
+H="( Edit )"
+
+: array  cells pop + @ ;
+: color.fg  array [ red , orange , grey , dkblue , dkcyan , pink , white , green , cyan , magenta -1 + ,
+: magentas  for magenta , loop ;
+: color.bg  array [ black , black , 8 magentas
+: color  dup color.fg text color.bg bg ;
+: assignment  array [ 2 , 0 , 4 , 5 , 1 , 3 , 7 , 6 , 8 , 9 ,
+
+: ecolor  bvar ;
+: ecur  bvar ;
+: eblk  bvar ;
+
+create >cur  ecur ,
+: cur  >cur @ ;
+create >blk  eblk ,
+: blk  >blk @ ;
+
+create curshape 127 ,
+: hide-cursor  0 curshape ! ;
+: show-cursor  127 curshape ! ;
+
+variable cadr // for debugging.
+variable adr
+variable cc
+: ?cursor  cc @ cur @ = if magenta -1 + seethru curshape @ gemit ;; then
+   magenta bg gspace ;
+: wtype src @ wcolor color word gtype
+   loc wcolor 5 = if '= gemit loc dup wlen + 1 + @ (g.) then ;
+: findcur  blk @ block src !  0 cc !
+   begin cc @ cur @ = token 0 = or if
+   src @ dup adr ! cadr ! ;; then word 2drop 1 cc +! again ;
+: display1   ?cursor  token 0;
+   src @ wcolor 2 < if x@ 0 > if cr then then  wtype
+   1 cc +! display1 ;
+: listing
+   src @ current 2@
+    findcur  blk @ dup  block src !  white text black bg gspace g.  0 cc !
+    display1
+   current 2! src ! ;
+
+
+: room  for adr @ a! blk @ block 1023 + push
+   0 begin a c@ swap a c! 1 +a a r = until pop 2drop loop ;
+: ?var+  ecolor @ 5 = if 4 room 0 over adr @ + 1 + ! then ;
+: blk+  2
+: +blk  blk @ + 0 min blk ! ;
+: blk-  -2 +blk ;
+: forward  1
+: +cur   cur @ + 0 min cur ! findcur ;
+: top  0 cur ! ;
+: past?  adr @ c@ 0 = ;
+: end  top begin forward past? until ;
+: insert   past? if end then
+   zero 2drop ;; then  31 max dup 1 + room ?var+ ecolor @
+   32 * over or adr @ c! adr @ 1 + cmove ;
+: back  -1 +cur ;
+: +fwd  6 +cur SHIFT? if end then ;
+: +back  -6 +cur SHIFT? if top then ;
+: recolor  ecolor @  adr @ c@ %00011111 and swap 32 * or adr @ c! forward ;
+: shadow  blk @ 1 xor blk ! ;
+
+
+create clipb 4000 allot here 0 1, create >clip ,
+: cpush  dup 1 + - >clip +! dup >clip @ c! >clip @ 1 + cmove ;
+: cpop  >clip @ dup c@ dup 1 + >clip +! 1 u+ ;
+: paste  >clip @ c@ 0; findcur cpop dup room adr @ cmove forward ;
+: -end  blk @ 1 + block -1 + swap - + ;
+: cut  cur @ 0; back findcur adr @ dup dup
+   wlen 1 + over mag+ cpush next swap over -end swap cmove ;
+
+
+: caret  assignment color magenta bg 127 gemit ;
+: colors  30 bottom -16 + at 0 8 for
+   dup  dup assignment color 1 + g. 1 + 16 +x loop drop ;
+
+: sys$  0 block (word) ;
+: sys  32 parse
+: loadsys  2dup 0 block inflate titlebar vw @ vh @ smode @ gfx ;
+: save  0 block #blocks blocks sys$ compress sys$ titlebar ;
+
+
+: chars  10 * ;
+: rows  16 * ;
+
+: stack  0 bottom [ -2 rows ]# + at  side bottom blue box  white seethru
+: g.s  depth 0 less= drop ;; then  10 max for i pick g. loop ;
+
+
+
+H="( Footer )"
+' char (hemit) !
+: ctype  zero 2drop ;; then for dup c@ char 1 + loop drop ;
+' ctype (htype) !
+
+
+//
+mark reset
+sys template
+0 load
+// fload editor.f
+// e
