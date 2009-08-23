@@ -1,0 +1,44 @@
+Glypher
+============================================================================
+Glypher is a programming platform oriented towards visual programming and
+game development. It runs on the Windows platform.
+
+The language is a cross between RetroForth (7th Generation) and ColorForth.
+As a colored Forth, it uses different colors (assigned to function keys)
+to determine the action to take with code. It also has a tightly integrated
+editor.
+
+When Glypher starts, you get a random introduction screen. This is generated
+by a small program on block 20. You can navigate through the blocks by using
+ALT+the arrow keys.
+
+Inside a block, use the arrow keys to move around. To delete a word, place
+the cursor directly after the word and press delete.
+
+To enter a word, type in the word and then press the function key that
+corresponds to the color action you wish to take. Use the normal space bar
+to simply execute the word.
+
+Use 'save' to save your blocks and 'bye' to quit Glypher. Look around, tweak
+things, and have fun! If you do anything interesting with it, please feel
+free to share your results with us.
+
+
+
+Color      Use
+============================================================================
+RED        Define a forth word
+ORANGE     Define a macro word
+GREY       Compile a Forth word, or execute a macro word, or
+           compile a number as a literal. Searches the macro
+           dictionary first.
+BLUE       Compile a macro word, or have a macro compile a Forth
+           when executed
+CYAN       Execute forth words only; compile a literal if the next
+           word is GREY. Macros will not work here.
+MAGENTA    Create a variable inside the source
+WHITE      Comments; do nothing
+GREEN      Define a string. on GREEN to non-green, the string is
+           compiled, EXCEPT when the next color is CYAN, then it
+           is placed on the stack.
+============================================================================
